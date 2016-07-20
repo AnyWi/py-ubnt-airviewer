@@ -41,7 +41,7 @@ import matplotlib.animation as animation
 import matplotlib.ticker as plticker
 
 USERNAME = 'ubnt'
-PASSWORD = 'bert'
+PASSWORD = 'ubnt'
 HOST = "192.168.1.20"
 PORT = 18888
 TIMEOUT = 10

@@ -214,7 +214,7 @@ print width, height
 bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 width, height = bbox.width*fig.dpi, bbox.height*fig.dpi
 
-matrix = np.empty([height,bin_size]) * np.nan
+matrix = np.empty([int(height),bin_size]) * np.nan
 pcm = ax.pcolorfast(matrix, vmin=-122, vmax=-30)
 
 if ACTION == 'record':

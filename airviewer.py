@@ -35,6 +35,7 @@ import time
 import sys
 
 import numpy as np
+import matplotlib
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -56,11 +57,18 @@ def usage():
     print "Options:"
     print "\tlive              \t=\tProcess live data from device " + HOST
     print "\treplay FILENAME   \t=\tReplay FILENAME"
+    print "\trecord FILENAME   \t=\tMake movie of FILENAME"
     exit(128)
 
 if len(sys.argv) == 2 and sys.argv[1] == 'live':
+    ACTION='live'
     FILENAME = None
 elif len(sys.argv) == 3 and sys.argv[1] == 'replay':
+    ACTION='replay'
+    FILENAME = sys.argv[2] # Stored data processing
+    FRAME_SPEED = 50
+elif len(sys.argv) == 3 and sys.argv[1] == 'record':
+    ACTION='record'
     FILENAME = sys.argv[2] # Stored data processing
     FRAME_SPEED = 50
 else:
@@ -168,7 +176,7 @@ print "Bin size: %s" % bin_size
 
 
 # Start making picture
-fig, ax = plt.subplots(figsize=(10,11))
+fig, ax = plt.subplots(figsize=(20,11))
 fig.canvas.set_window_title('UBNT airView Client')
 ax.set_ylabel('100ms units elapsed')
 ax.set_xlabel('Frequency (sampled with bins of %s kHz)' % bin_sample_khz)
@@ -183,10 +191,10 @@ plt.xticks(rotation=90)
 for i in range(1,15):
     width_20mhz = 20000.0 / bin_sample_khz
     if i in [1,6,11,14]:
-        pac = mpatches.Arc([channels[i], 0], width_20mhz, 100, 
+        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
             theta2=180, linestyle='solid', linewidth=2, color='black')
     else:
-        pac = mpatches.Arc([channels[i], 0], width_20mhz, 100, 
+        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
             theta2=180, linestyle='dashed', linewidth=2, color='black')
     ax.add_patch(pac)
 
@@ -197,10 +205,22 @@ ax.get_xaxis().set_major_formatter(
 plt.grid(linewidth=2,linestyle='solid',color='black')
 plt.tight_layout()
 
-# Initial data and history of 500 samples
-matrix = np.empty([500,bin_size]) * np.nan
+bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+width, height = bbox.width*fig.dpi, bbox.height*fig.dpi
+print width, height
+
+# Initial data and history of amount of pixels of the screen, since it is
+# important that all lines are draw on the screen.
+bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+width, height = bbox.width*fig.dpi, bbox.height*fig.dpi
+
+matrix = np.empty([height,bin_size]) * np.nan
 pcm = ax.pcolorfast(matrix, vmin=-122, vmax=-30)
 
+if ACTION == 'record':
+    # Set up formatting for the movie files
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=15, metadata=dict(artist='AnyWi UBNT airViewer'), bitrate=1800)
 
 #
 # Matplotlib Animation
@@ -226,14 +246,19 @@ def update(data):
         #matrix = np.vstack([row, pcm.get_array()[:-1]])
         matrix = np.vstack([row, matrix[:-1]])
 
-    print frame_nr
     pcm.set_array(matrix)
     ax.set_title('Frame %s at %s' % (frame_nr, time.asctime(time.localtime(ts))))
     #fig.canvas.draw()
         
     
 ani = animation.FuncAnimation(fig, update, interval=100)
-plt.show()
+
+# Dual display and recording data does not seems to work, use a screencast
+# program like gtk-recordmydesktop for that matter
+if ACTION == 'record':
+    ani.save('live.mp4' if not FILENAME else FILENAME.rsplit('.',1)[0] + '.mp4', writer=writer)
+else:
+    plt.show()
         
 #
 # Takes some time (10 seconds) for device to return to an active state

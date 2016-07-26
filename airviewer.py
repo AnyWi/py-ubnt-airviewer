@@ -45,6 +45,10 @@ PASSWORD = 'ubnt'
 HOST = "192.168.1.20"
 PORT = 18888
 TIMEOUT = 10
+FRAME_SPEED = 1
+
+LOGIN_URI = 'http://' + HOST + ':80/login.cgi'
+#LOGIN_URI = 'https://' + HOST + ':443/login.cgi'
 
 def usage():
     print "Usage:" + sys.argv[0] + " <live|replay FILENAME>"
@@ -58,6 +62,7 @@ if len(sys.argv) == 2 and sys.argv[1] == 'live':
     FILENAME = None
 elif len(sys.argv) == 3 and sys.argv[1] == 'replay':
     FILENAME = sys.argv[2] # Stored data processing
+    FRAME_SPEED = 50
 else:
     usage()
 
@@ -76,9 +81,14 @@ scan_range_end = 2497000000
 if not FILENAME:
     print "Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST)
     s = requests.session()
-    s.get('http://' + HOST + '/login.cgi')
-    s.post('http://' + HOST + '/login.cgi', 
-        {"username": USERNAME, "password": PASSWORD, "uri": "airview.cgi?start=1"})
+    s.get(LOGIN_URI, verify=False)
+    r = s.post(LOGIN_URI,
+        {"username": USERNAME, "password": PASSWORD, "uri": "airview.cgi?start=1"},
+        verify=False)
+    if 'Invalid credentials.' in r.text:
+        print "# CRIT: Username/password invalid!"
+        sys.exit(1)
+    
     
     
     print "Waiting for device to enter airView modus..."
@@ -196,20 +206,34 @@ pcm = ax.pcolorfast(matrix, vmin=-122, vmax=-30)
 # Matplotlib Animation
 #
 def update(data):
-    global frame_nr
-    frame_nr += 1
-    ts, frame_nr, row = get_frame(frame_nr)
-    # We are on the end of the file
-    if not ts and not frame_nr and not row:
-        return
-    #row = np.random.randint(255, size=(1,100))
-    matrix = np.vstack([row, pcm.get_array()[:-1]])
+    global frame_nr, matrix
+
+    # Fast forwarding in time
+    for i in range(FRAME_SPEED):
+        
+        frame_nr_next = -1
+
+        # The same frame (duplicated), we are too fast
+        while frame_nr_next <= frame_nr:
+            ts, frame_nr_next, row = get_frame(frame_nr + 1)
+            
+        frame_nr = frame_nr_next
+
+        # We are on the end of the file
+        if not ts and not frame_nr and not row:
+            return
+
+        #matrix = np.vstack([row, pcm.get_array()[:-1]])
+        matrix = np.vstack([row, matrix[:-1]])
+
+    print frame_nr
     pcm.set_array(matrix)
     ax.set_title('Frame %s at %s' % (frame_nr, time.asctime(time.localtime(ts))))
+    #fig.canvas.draw()
+        
     
 ani = animation.FuncAnimation(fig, update, interval=100)
 plt.show()
-        
         
 #
 # Takes some time (10 seconds) for device to return to an active state

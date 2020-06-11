@@ -41,6 +41,13 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.ticker as plticker
 
+requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
+try:
+    requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += 'HIGH:!DH:!aNULL'
+except AttributeError:
+    # no pyopenssl support used / needed / available
+    pass
+
 USERNAME = 'ubnt'
 PASSWORD = 'ubnt'
 HOST = "192.168.1.20"
@@ -52,12 +59,12 @@ LOGIN_URI = 'http://' + HOST + ':80/login.cgi'
 #LOGIN_URI = 'https://' + HOST + ':443/login.cgi'
 
 def usage():
-    print "Usage:" + sys.argv[0] + " <live|replay FILENAME>"
-    print ""
-    print "Options:"
-    print "\tlive              \t=\tProcess live data from device " + HOST
-    print "\treplay FILENAME   \t=\tReplay FILENAME"
-    print "\trecord FILENAME   \t=\tMake movie of FILENAME"
+    print("Usage:" + sys.argv[0] + " <live|replay FILENAME>")
+    print("")
+    print("Options:")
+    print("\tlive              \t=\tProcess live data from device " + HOST)
+    print("\treplay FILENAME   \t=\tReplay FILENAME")
+    print("\trecord FILENAME   \t=\tMake movie of FILENAME")
     exit(128)
 
 if len(sys.argv) == 2 and sys.argv[1] == 'live':
@@ -78,7 +85,7 @@ else:
 
 def parse_get_frame_resp(line):
     _,vals_raw = line.split(':')
-    vals = map(int, vals_raw.split(','))
+    vals = list(map(int, vals_raw.split(',')))
     frame_nr = vals.pop(0)
     return(frame_nr, vals)
 
@@ -87,45 +94,46 @@ scan_range_begin = 2402000000
 scan_range_end = 2497000000
 
 if not FILENAME:
-    print "Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST)
+    print("Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST))
     s = requests.session()
     s.get(LOGIN_URI, verify=False)
     r = s.post(LOGIN_URI,
         {"username": USERNAME, "password": PASSWORD, "uri": "airview.cgi?start=1"},
         verify=False)
+    r.raise_for_status()
     if 'Invalid credentials.' in r.text:
-        print "# CRIT: Username/password invalid!"
+        print("# CRIT: Username/password invalid!")
         sys.exit(1)
     
     
     
-    print "Waiting for device to enter airView modus..."
+    print("Waiting for device to enter airView modus...")
     # Allow device a few moments to settle
     time.sleep(TIMEOUT)
     
-    print "Start scanning..."
+    print("Start scanning...")
     tn = telnetlib.Telnet(HOST, PORT, timeout=TIMEOUT)
     #tn.set_debuglevel(99)
     
     # Storage on unique files
     outfile = 'output-%s.dat' % int(time.time())
-    print "Storing output at '%s'" % outfile
+    print("Storing output at '%s'" % outfile)
     fh = open(outfile, 'a')
     def writeline(cmd):
         """ Write line to device"""
         ts = time.time()
-        tn.write(cmd)
-        print cmd 
+        tn.write(cmd.encode('utf-8'))
+        print(cmd)
         fh.write("%s\001%s" % (ts, cmd))
         return ts
         
     
     def getline():
         """Read line from device"""
-        line = tn.read_until("\n")
-        print line
+        line = tn.read_until(b"\n")
+        print(line)
         fh.write("%s\001%s" % (time.time(), line))
-        return line
+        return line.decode('utf-8')
     
     # Commands needs to have a trailing space if no arguments specified
     writeline("CONNECT: \n")
@@ -142,7 +150,7 @@ if not FILENAME:
     
     writeline("START SCAN: \n")
     getline()
-    print "Waiting for scan to start..."
+    print("Waiting for scan to start...")
     time.sleep(2)
 
     def get_frame(frame):
@@ -172,7 +180,7 @@ else:
 _, frame_nr, vals = get_frame(None)
 bin_size = len(vals)
 bin_sample_khz = float(scan_range_end - scan_range_begin) / 1000 / bin_size
-print "Bin size: %s" % bin_size
+print("Bin size: %s" % bin_size)
 
 
 # Start making picture
@@ -207,7 +215,6 @@ plt.tight_layout()
 
 bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 width, height = bbox.width*fig.dpi, bbox.height*fig.dpi
-print width, height
 
 # Initial data and history of amount of pixels of the screen, since it is
 # important that all lines are draw on the screen.

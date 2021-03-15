@@ -296,12 +296,13 @@ def update(data):
         # The same frame (duplicated), we are too fast
         while frame_nr_next <= frame_nr:
             ts, frame_nr_next, row = get_frame(frame_nr + 1)
-            
+
+            # We are on the end of the file
+            if not ts and not frame_nr_next and not row:
+                return
+
         frame_nr = frame_nr_next
 
-        # We are on the end of the file
-        if not ts and not frame_nr and not row:
-            return
 
         #matrix = np.vstack([row, pcm.get_array()[:-1]])
         matrix = np.vstack([row, matrix[:-1]])

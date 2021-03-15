@@ -154,10 +154,10 @@ if not FILENAME:
     #writeline("REQUEST RANGE: 2402000000,2477000000\n") # (ch 1-11 - US allocation)
     #writeline("REQUEST RANGE: 2402000000,2487000000\n") # (ch 1-13 - UK allocation)
     #writeline("REQUEST RANGE: 2402000000,2497000000\n") # (ch 1-14)
-    #writeline("REQUEST RANGE: 5150000000,5250000000\n") # 5.150-5.250 (U-NII Lower Band)
+    writeline("REQUEST RANGE: 5150000000,5250000000\n") # 5.150-5.250 (U-NII Lower Band)
     #writeline("REQUEST RANGE: 5250000000,5350000000\n") # 5.250-5.350 (U-NII Middle Band)
     #writeline("REQUEST RANGE: 5470000000,5725000000\n") # 5.470-5.725 (U-NII Worldwide)
-    writeline("REQUEST RANGE: 5150000000,5725000000\n") # (U-NII wide-spectrum)
+    #writeline("REQUEST RANGE: 5150000000,5725000000\n") # (U-NII wide-spectrum)
     getline()
     
     writeline("START SCAN: \n")
@@ -176,6 +176,7 @@ else:
     # No need for logic since we are processing stored data
     sh = open(FILENAME, 'r')
     def get_frame(frame):
+        global scan_range_begin, scan_range_end
         """ Perform replay data processing """
         while True:
             line = sh.readline()
@@ -186,13 +187,20 @@ else:
             cmd, ret = a.split(':', 1)
             if cmd == 'FRAME':
                 return((ts,) + parse_get_frame_resp(a))
+            elif cmd == 'SCAN RANGE':
+                scan_range_begin, scan_range_end = map(int, ret.split(','))
             
+
+kHz = lambda x: float(x) / 1000
+MHz = lambda x: kHz(x) / 1000
+GHz = lambda x: MHz(x) / 1000
 
 # Get innitial frame number and bins sizes
 _, frame_nr, vals = get_frame(None)
 bin_size = len(vals)
-bin_sample_khz = float(scan_range_end - scan_range_begin) / 1000 / bin_size
+bin_sample_khz = kHz(scan_range_end - scan_range_begin) / bin_size
 print(("Bin size: %s" % bin_size))
+print('Scan range: %s - %s MHz (delta: %s MHz)' % (MHz(scan_range_begin), MHz(scan_range_end), MHz(scan_range_end - scan_range_begin)))
 
 
 # Start making picture
@@ -201,26 +209,59 @@ fig.canvas.set_window_title('UBNT airView Client')
 ax.set_ylabel('100ms units elapsed')
 ax.set_xlabel('Frequency (sampled with bins of %s kHz)' % bin_sample_khz)
 
-# Channel center frequencies
-a = [2402,2412,2417,2422,2427,2432,2437,2442,2447,2452,2457,2462,2467,2472,2484,2497]
-channels = (np.array(a,dtype='float32') - 2402) / (bin_sample_khz / 1000)
-ax.get_xaxis().set_ticks(channels)
-plt.xticks(rotation=90)
+# Plotting 2.4GHz channels
+#a = [2402,2412,2417,2422,2427,2432,2437,2442,2447,2452,2457,2462,2467,2472,2484,2497]
+#channels = (np.array(a,dtype='float32') - 2402) / (bin_sample_khz / 1000)
 
+# Plotting 5GHz channels
+channels = list(range(32,68,4)) + list(range(100,148,4)) + list(range(149,169,4))
+xticks = []
+xticklabels = []
+for channel in channels:
+    freq_mhz = 5000 + (channel * 5)
+    xtick = freq_mhz - MHz(scan_range_begin)
+    xticklabel = "%i (%s)" % (freq_mhz, channel)
+
+    xticks.append(xtick)
+    xticklabels.append(xticklabel)
+
+ax.set_xticks(xticks)
+ax.set_xticklabels(xticklabels)
+plt.xticks(rotation=45)
+
+
+# Plotting of 2.4 GHz channels
 # Plot channel description
-for i in range(1,15):
-    width_20mhz = 20000.0 / bin_sample_khz
-    if i in [1,6,11,14]:
-        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
-            theta2=180, linestyle='solid', linewidth=2, color='black')
-    else:
-        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
-            theta2=180, linestyle='dashed', linewidth=2, color='black')
+#for i in range(1,15):
+#    width_20mhz = 20000.0 / bin_sample_khz
+#    if i in [1,6,11,14]:
+#        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
+#            theta2=180, linestyle='solid', linewidth=2, color='black')
+#    else:
+#        pac = mpatches.Arc([channels[i], 0], width_20mhz, 300, 
+#            theta2=180, linestyle='dashed', linewidth=2, color='black')
+#    ax.add_patch(pac)
+#ax.get_xaxis().set_major_formatter(
+#            plticker.FuncFormatter(lambda x, p: format(int((x * bin_sample_khz) + 5000), ',')))
+#        #    plticker.FuncFormatter(lambda x, p: format(int((x * bin_sample_khz / 1000) + 5000), ',')))
+
+
+
+# Plotting 5GHz 20MHz-width channels
+for channel in channels:
+    freq_mhz = 5000 + (channel * 5)
+    xtick = (freq_mhz - 10) - MHz(scan_range_begin)
+    xtick = freq_mhz - MHz(scan_range_begin)
+
+    pac = mpatches.Polygon((
+          (((freq_mhz - 10) - MHz(scan_range_begin)), 0),
+          (((freq_mhz - 7.5) - MHz(scan_range_begin)), 20),
+          (((freq_mhz + 7.5) - MHz(scan_range_begin)), 20),
+          (((freq_mhz + 10) - MHz(scan_range_begin)), 0),
+        ), linestyle='solid', linewidth=0, color='grey', alpha=0.4)
     ax.add_patch(pac)
 
 
-ax.get_xaxis().set_major_formatter(
-    plticker.FuncFormatter(lambda x, p: format(int((x * bin_sample_khz / 1000) + 2402), ',')))
 
 plt.grid(linewidth=2,linestyle='solid',color='black')
 plt.tight_layout()

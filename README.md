@@ -1,5 +1,7 @@
 # py-ubnt-airviewer
-Python UBNT airView client as alternative for the Java based client shipped with Ubiquiti airMax based products. Tested with Bullet M2. 
+Python UBNT airView client as alternative for the Java based client shipped with Ubiquiti airMax based products. Tested with:
+* Bullet M2 (firmware 5.x)
+* NanoStation M5 (firmware XM.v6.3.2)
 
 ![Screenshot](https://github.com/AnyWi/py-ubnt-airviewer/raw/trunk/screenshot.png)
 

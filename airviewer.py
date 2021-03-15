@@ -41,12 +41,15 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.ticker as plticker
 
-requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
-try:
-    requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += 'HIGH:!DH:!aNULL'
-except AttributeError:
-    # no pyopenssl support used / needed / available
-    pass
+# Latest firmware versions use HTTPS self-signed certificates by default
+requests.packages.urllib3.disable_warnings()
+
+#requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
+#try:
+#    requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += 'HIGH:!DH:!aNULL'
+#except AttributeError:
+#    # no pyopenssl support used / needed / available
+#    pass
 
 USERNAME = 'ubnt'
 PASSWORD = 'ubnt'
@@ -55,8 +58,7 @@ PORT = 18888
 TIMEOUT = 10
 FRAME_SPEED = 1
 
-LOGIN_URI = 'http://' + HOST + ':80/login.cgi'
-#LOGIN_URI = 'https://' + HOST + ':443/login.cgi'
+BASE_URI = 'https://' + HOST + ':443'
 
 def usage():
     print(("Usage:" + sys.argv[0] + " <live|replay FILENAME>"))
@@ -95,18 +97,24 @@ scan_range_end = 2497000000
 
 if not FILENAME:
     print(("Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST)))
+
+    # Request session cookie
     s = requests.session()
-    s.get(LOGIN_URI, verify=False)
-    r = s.post(LOGIN_URI,
-        {"username": USERNAME, "password": PASSWORD, "uri": "airview.cgi?start=1"},
-        verify=False)
+    s.get(BASE_URI + '/login.cgi', verify=False)
+
+    # Authenticate
+    r = s.post(BASE_URI + '/login.cgi',
+        {"username": USERNAME, "password": PASSWORD}, verify=False)
     r.raise_for_status()
     if 'Invalid credentials.' in r.text:
         print("# CRIT: Username/password invalid!")
         sys.exit(1)
-    
-    
-    
+
+    # Enable airView
+    r = s.post(BASE_URI + '/airview.cgi',
+        {"start": 1}, verify=False)
+    r.raise_for_status()
+
     print("Waiting for device to enter airView modus...")
     # Allow device a few moments to settle
     time.sleep(TIMEOUT)

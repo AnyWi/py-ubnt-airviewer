@@ -153,7 +153,11 @@ if not FILENAME:
     #writeline("REQUEST RANGE: 2402000000,2422000000\n") # 20 Mhz
     #writeline("REQUEST RANGE: 2402000000,2477000000\n") # (ch 1-11 - US allocation)
     #writeline("REQUEST RANGE: 2402000000,2487000000\n") # (ch 1-13 - UK allocation)
-    writeline("REQUEST RANGE: 2402000000,2497000000\n") # (ch 1-14)
+    #writeline("REQUEST RANGE: 2402000000,2497000000\n") # (ch 1-14)
+    #writeline("REQUEST RANGE: 5150000000,5250000000\n") # 5.150-5.250 (U-NII Lower Band)
+    #writeline("REQUEST RANGE: 5250000000,5350000000\n") # 5.250-5.350 (U-NII Middle Band)
+    #writeline("REQUEST RANGE: 5470000000,5725000000\n") # 5.470-5.725 (U-NII Worldwide)
+    writeline("REQUEST RANGE: 5150000000,5725000000\n") # (U-NII wide-spectrum)
     getline()
     
     writeline("START SCAN: \n")

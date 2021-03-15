@@ -59,10 +59,10 @@ LOGIN_URI = 'http://' + HOST + ':80/login.cgi'
 #LOGIN_URI = 'https://' + HOST + ':443/login.cgi'
 
 def usage():
-    print("Usage:" + sys.argv[0] + " <live|replay FILENAME>")
+    print(("Usage:" + sys.argv[0] + " <live|replay FILENAME>"))
     print("")
     print("Options:")
-    print("\tlive              \t=\tProcess live data from device " + HOST)
+    print(("\tlive              \t=\tProcess live data from device " + HOST))
     print("\treplay FILENAME   \t=\tReplay FILENAME")
     print("\trecord FILENAME   \t=\tMake movie of FILENAME")
     exit(128)
@@ -94,7 +94,7 @@ scan_range_begin = 2402000000
 scan_range_end = 2497000000
 
 if not FILENAME:
-    print("Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST))
+    print(("Enabling Ubiquiti airView at %s:%s@%s..." %(USERNAME, PASSWORD, HOST)))
     s = requests.session()
     s.get(LOGIN_URI, verify=False)
     r = s.post(LOGIN_URI,
@@ -117,7 +117,7 @@ if not FILENAME:
     
     # Storage on unique files
     outfile = 'output-%s.dat' % int(time.time())
-    print("Storing output at '%s'" % outfile)
+    print(("Storing output at '%s'" % outfile))
     fh = open(outfile, 'a')
     def writeline(cmd):
         """ Write line to device"""
@@ -180,7 +180,7 @@ else:
 _, frame_nr, vals = get_frame(None)
 bin_size = len(vals)
 bin_sample_khz = float(scan_range_end - scan_range_begin) / 1000 / bin_size
-print("Bin size: %s" % bin_size)
+print(("Bin size: %s" % bin_size))
 
 
 # Start making picture

@@ -130,8 +130,8 @@ if not FILENAME:
     def writeline(cmd):
         """ Write line to device"""
         ts = time.time()
-        tn.write(cmd.encode('utf-8'))
-        print(cmd)
+        tn.write(cmd.encode('ascii'))
+        print("Sending: %s", cmd.strip())
         fh.write("%s\001%s" % (ts, cmd))
         return ts
         
@@ -139,9 +139,9 @@ if not FILENAME:
     def getline():
         """Read line from device"""
         line = tn.read_until(b"\n")
-        print(line)
-        fh.write("%s\001%s" % (time.time(), line))
-        return line.decode('utf-8')
+        print('Received: %s', line.decode('ascii').strip())
+        fh.write("%s\001%s" % (time.time(), line.decode('ascii')))
+        return line.decode('ascii')
     
     # Commands needs to have a trailing space if no arguments specified
     writeline("CONNECT: \n")
